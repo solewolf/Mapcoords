@@ -1,7 +1,7 @@
 name: Mapcoords
 main: com.guysthatcode.Mapcoords.Mapcoords
-version: 1.1.0
-description: This plugin can record coordinates and retrieve saved locations as well as many other features.
+version: 2.0.0
+description: This plugin provides useful tools for coordinates
 author: SoleWolf
 website: http://dev.bukkit.org/bukkit-plugins/mapcoords/
 
@@ -17,31 +17,52 @@ permissions:
     children:
       mc.add.public: true
       mc.add.private: true
+
       mc.list.public: true
       mc.list.private: true
       mc.list.other: true
+
       mc.delete.public: true
       mc.delete.private: true
       mc.delete.other: true
+
       mc.coords: true
       mc.saycoords: true
+
       mc.find: true
+
       mc.goto.public: true
       mc.goto.private: true
       mc.goto.other: true
+
       mc.tp.public: true
       mc.tp.private: true
       mc.tp.other: true
+
+      mc.compass.public: true
+      mc.compass.private: true
+      mc.compass.other: true
+
+      mc.compass.reset: true
+
+      mc.publish.private: true
+      mc.publish.other: true
+
+      mc.rename.public: true
+      mc.rename.private: true
+      mc.rename.other: true
     default: op
   mc:
     description: Mapcoords base command
     default: true
+
   mc.add.public:
     description: Add new coordinates to the public list.
     default: false
   mc.add.private:
     description: Add new coordinates to user's private list.
     default: true
+
   mc.list.public:
     description: List all recorded coordinates of the public list.
     default: false
@@ -51,6 +72,7 @@ permissions:
   mc.list.other:
     description: List all recorded coordinates of supplied user.
     default: false
+
   mc.delete.public:
     description: Delete coordinates from the public list.
     default: false
@@ -60,15 +82,18 @@ permissions:
   mc.delete.other:
     description: Delete coordinates from other players.
     default: false
+
   mc.coords:
     description: Show a player their current coordinates.
-    default: false
+    default: true
   mc.saycoords:
     description: Makes a player say their current coordinates.
-    default: false
+    default: true
+
   mc.find:
     description: Find the coordinates of other players.
     default: false
+
   mc.goto.public:
     description: Get directions for public coordinates.
     default: false
@@ -78,12 +103,44 @@ permissions:
   mc.goto.other:
     description: Get directions for other coordinates.
     default: false
+
   mc.tp.public:
     description: Teleport to public coordinates
     default: false
   mc.tp.private:
     description: Teleport to your private coordinates
-    default: true
+    default: false
   mc.tp.other:
     description: Teleport to other players coordinates
+    default: false
+
+  mc.compass.public:
+    description: Point the compass at public public coordinates
+    default: false
+  mc.compass.private:
+    description: Point the compass at private coordinates
+    default: true
+  mc.compass.other:
+    description: Point the compass at other players coordinates
+    default: false
+
+  mc.compass.reset:
+    description: Reset the compass to spawn
+    default: true
+
+  mc.publish.private:
+    description: Publish private coordinates to the public list
+    default: true
+  mc.publish.other:
+    description: Publish other players coordinates to the public list
+    default: false
+
+  mc.rename.public:
+    description: Rename public coordinates
+    default: false
+  mc.rename.private:
+    description: Rename private coordinates
+    default: true
+  mc.rename.other:
+    description: Rename other players coordinates
     default: false

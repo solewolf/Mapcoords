@@ -108,6 +108,26 @@ If you are using a database
 - mc.rename.other       - Rename other players coordinates
 
 ## Change Log
+### Version 2.0.0
+Did I say the last update was big? I really meant that this one is the big one. So big, it went up an entire version number :O!
+New Features
+- Added support for Flat Files! If you don't have a MySQL server running on your computer, you can now actually use this plugin!
+- Added compass command
+- Added publish command
+- Added rename command
+- Added flying speed as an ETA for the goto command
+- Added page numbers for help menu. Also, help menu now displays all commands even if you don't have permissions.
+- New useDatabase config setting
+- New debug setting
+- Modified the color scheme a little
+- Reduced coding redundancies and messiness saving 5 kb of space (if you care to know).
+- A whole lot more permissions for control of what commands your players have access to.
+
+Bug Fixes
+- Command listo actually works now.
+- Fixed goto bug saying your destination is "unknown" from you. Now it'll say under/above if you are at the correct x/z but not y.
+- Fixed tp bug that teleported you into the ground and caused suffocation damage.
+
 ### Version 1.1.0
 This is the BIG update! Where do I start...
 - Added private and public lists!
