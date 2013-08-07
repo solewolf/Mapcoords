@@ -108,6 +108,13 @@ If you are using a database
 - mc.rename.other       - Rename other players coordinates
 
 ## Change Log
+### Version 1.0.3
+This is the permissions update! They are here!
+- Added permissions support
+- Auto update detection! Whenever you start up your server, the script will check for an update. Also, whenever an OP logs on to the server, they will receive an "update available" message.
+- Converted player names into player ids and also added a tablename_users table.
+- Code is much more clean and maintainable now.
+
 ### Version 1.0.2
 - Fixed database bug that made the connection with the database timeout.
 - Fixed bug that prevented database connection from closing (hint: I forgot to add code that closed connection to the database).

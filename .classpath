@@ -3,5 +3,11 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/bukkit-1.5.2-R0.2-20130527.060105-7.jar"/>
+	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/zPermissions.jar"/>
+	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/Vault.jar"/>
+	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/Permissions.jar"/>
+	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/EssentialsGroupManager.jar"/>
+	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/PermissionsEx.jar"/>
+	<classpathentry kind="lib" path="/Users/Keith/git/Bukkit/api/bpermissions.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
