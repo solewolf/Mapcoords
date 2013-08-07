@@ -108,5 +108,9 @@ If you are using a database
 - mc.rename.other       - Rename other players coordinates
 
 ## Change Log
+### Version 1.0.1
+- Added support for The Nether and The End!
+- Made the coords and saycoords command say what world you are in.
+- List command says what world coordinates are in and also sorts all of the stored coordinates by world type.
 ### Version 1.0.0
 - Initial public release!

@@ -1,3 +1,9 @@
+/*
+ * Mapcoords
+ * Version 1.0.1
+ * Date: Mon Jun 3, 2013 7:18:22 AM
+ * Added Nether and The End support
+ */
 package com.guysthatcode.Mapcoords;
 
 import java.io.File;
@@ -119,16 +125,8 @@ public class Mapcoords extends JavaPlugin {
 	    				    int y = loc.getBlockY();
 	    				    int z = loc.getBlockZ();
 	    				    world = player.getLocation().getWorld().getName();
-	    				    if (world.equalsIgnoreCase("world")) {
-	    				    	world_id = 0;
-	    				    }
-	    				    else if (world.equalsIgnoreCase("world_nether")) {
-	    				    	world_id = 1;
-	    				    } else {
-	    				    	world_id = 2;
-	    				    }
+	    				    world_id = stringToWorldID(world);
 	    				    
-		    				
 		    				try {
 		    					con = DriverManager.getConnection(url, user, pass);
 		    					
@@ -147,7 +145,7 @@ public class Mapcoords extends JavaPlugin {
 			    				statement.setInt(7, world_id);
 								statement.executeUpdate();
 								
-								sender.sendMessage("Your current location (X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z + ChatColor.WHITE + ") was saved as " + ChatColor.GREEN + args[1] + ChatColor.WHITE + "!");
+								sender.sendMessage("Your current location [" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] (X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z + ChatColor.WHITE + ") was saved as " + ChatColor.GREEN + args[1] + ChatColor.WHITE + "!");
 			    			} catch (SQLException ex) {
 			    				sender.sendMessage(ChatColor.RED + "Error #1: Failed to connect to database! Is your database configuration set up correctly?");
 			    			}
@@ -157,16 +155,17 @@ public class Mapcoords extends JavaPlugin {
     			}
     			// Lists map coordinates that have been added in the database
     			else if (args[0].equalsIgnoreCase("list")) {
-	    			sender.sendMessage("Listing recorded coordinates...");
+    					sender.sendMessage("Listing recorded coordinates...");
+
 	    			try {
 	    				st = con.createStatement();
-						String query = "SELECT id, user, name, x, y, z FROM " + table + " ORDER BY id";
+						String query = "SELECT id, user, name, x, y, z, world FROM " + table + " ORDER BY world";
 						ResultSet result = st.executeQuery(query);
 						
 						int a = 0;
 						while (result.next()) {
 							a++;
-							sender.sendMessage(a + ". " + ChatColor.GOLD + result.getString("name") + ChatColor.WHITE + " at X: " + ChatColor.GREEN + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GREEN + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GREEN + result.getInt("z") + ChatColor.WHITE + " by " + ChatColor.AQUA + result.getString("user") + ChatColor.WHITE);
+							sender.sendMessage(a + ". [" + ChatColor.LIGHT_PURPLE + worldIDToString(result.getInt("world")) + ChatColor.WHITE + "] " + ChatColor.GREEN + result.getString("name") + ChatColor.WHITE + " at X: " + ChatColor.GOLD + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GOLD + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GOLD + result.getInt("z") + ChatColor.WHITE + " by " + ChatColor.AQUA + result.getString("user") + ChatColor.WHITE);
 						}
 						if (a == 0) {
 							sender.sendMessage(ChatColor.GOLD + "No coordinates have been added yet!");
@@ -191,7 +190,7 @@ public class Mapcoords extends JavaPlugin {
 	    					con.setAutoCommit(false);
 	    					
     	    				st = con.createStatement();
-    						String query = "SELECT id FROM " + table + " ORDER BY id";
+    						String query = "SELECT id FROM " + table + " ORDER BY world";
     						ResultSet result = st.executeQuery(query);
     						
     						while (result.next()) {
@@ -235,7 +234,9 @@ public class Mapcoords extends JavaPlugin {
     				    int x = loc.getBlockX();
     				    int y = loc.getBlockY();
     				    int z = loc.getBlockZ();
-						sender.sendMessage("Your current location is X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
+    				    
+    				    world = player.getLocation().getWorld().getName();
+						sender.sendMessage("Your current location is [" + ChatColor.LIGHT_PURPLE + worldIDToString(stringToWorldID(world)) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
     				}
     				return true;
     			}
@@ -249,8 +250,12 @@ public class Mapcoords extends JavaPlugin {
     				    int x = loc.getBlockX();
     				    int y = loc.getBlockY();
     				    int z = loc.getBlockZ();
-    				    player.chat("X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
+    				    world = player.getLocation().getWorld().getName();
+    				    player.chat("[" + ChatColor.LIGHT_PURPLE + worldIDToString(stringToWorldID(world)) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
     				}
+    				return true;
+    			} else {
+    				sender.sendMessage(ChatColor.GOLD + "Unknown command. Type /mc or /mapcoords for help.");
     				return true;
     			}
     			/*
@@ -322,6 +327,33 @@ public class Mapcoords extends JavaPlugin {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+    
+/* Custom Methods */
+    public String worldIDToString(int world_id) {
+    	switch(world_id) {
+    	case 0:
+    		return "Overworld";
+    	case 1:
+    		return "Nether";
+    	case 2:
+    		return "End";
+    	default:
+    		return "Unknown";
+    	}
+    }
+    public int stringToWorldID(String world) {
+    	if (world.equalsIgnoreCase("world")) {
+    		return 0;
+    	}
+    	else if (world.equalsIgnoreCase("world_nether")) {
+    		return 1;
+    	}
+    	else if (world.equalsIgnoreCase("world_the_end")) {
+    		return 2;
+    	} else {
+    		return 3;
+    	}
     }
 
 }

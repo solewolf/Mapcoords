@@ -1,6 +1,6 @@
 name: Mapcoords
 main: com.guysthatcode.Mapcoords.Mapcoords
-version: 1.0.0
+version: 1.0.1
 description: This plugin can record coordinates and retrieve saved locations.
 author: SoleWolf
 
