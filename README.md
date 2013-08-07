@@ -108,6 +108,24 @@ If you are using a database
 - mc.rename.other       - Rename other players coordinates
 
 ## Change Log
+### Version 1.1.0
+This is the BIG update! Where do I start...
+- Added private and public lists!
+Each player now has access to their own private coordinates! There is also a public lists that anyone can view if they are given the proper permissions.
+- Fixed update bug in plugin.yml configuration
+- Added option to disable permissions system
+
+New Commands
+- goto command
+Tells you how far away a saved location is as well as how long it'll take you to get there via walking or sprinting.
+- find command
+Tells you are player's location (Their world and x, y, and z coordinates)
+- tp command
+Teleport to any of your saved locations!
+
+New Permissions
+Because of all of the new features, there is a plethora of new permissions that gives you complete control over what your players are allowed to do!
+
 ### Version 1.0.3
 This is the permissions update! They are here!
 - Added permissions support

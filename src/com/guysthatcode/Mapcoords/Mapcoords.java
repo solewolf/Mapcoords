@@ -1,11 +1,9 @@
 /*
  * Mapcoords
- * Version 1.0.3
- * Date: Fri Jun 7, 2013 4:27:20 PM
- * This is the permissions update!
- * Also added update detection script!
- * And converted players into ids for future public/private lists update
- * And cleaned up code
+ * Version 1.1.0
+ * Date: Thu Jun 13, 2013 11:36:50 PM
+ * Added public/private lists
+ * Add support for disabling permissions
  */
 package com.guysthatcode.Mapcoords;
 
@@ -27,7 +25,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.command.Command;
@@ -57,6 +57,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
 	String world, version, newVersion;
 	int world_id, iver, inewver;
 	boolean epic_fail, first_run, newUpdate;
+	enum DIRECTION {SOUTH, WEST, NORTH, EAST, UNKNOWN};
 
     @Override
     public void onEnable() {
@@ -101,6 +102,10 @@ public class Mapcoords extends JavaPlugin implements Listener {
         if (config.get("settings.checkForUpdates") == null) {
             config.set("settings.checkForUpdates", true);
             getLogger().info("Restoring missing settings.checkForUpdates configuration value...");
+        }
+        if (config.get("settings.permissions") == null) {
+            config.set("settings.permissions", true);
+            getLogger().info("Restoring missing settings.permissions configuration value...");
         }
         if (config.get("database.url") == null) {
             config.set("database.url", "jdbc:mysql://localhost:3306/DATABASE");
@@ -152,19 +157,66 @@ public class Mapcoords extends JavaPlugin implements Listener {
     		
     		// If there isn't an argument, it is not a valid command
     		if (args.length == 0) {
-    	    			// Output how to use command if user doesn't provide arguments
-    	    			sender.sendMessage("Mapcoords Usage:");
-    	    			sender.sendMessage(ChatColor.GOLD + "/mapcoords" + ChatColor.WHITE + " - Lists all available commands");
-    	    			sender.sendMessage(ChatColor.GOLD + "/mapcoords add [name]" + ChatColor.WHITE + " - Adds player's current location [name] to database");
-    					sender.sendMessage(ChatColor.GOLD + "/mapcoords delete [id]" + ChatColor.WHITE + " - Delete saved location [id] from database");
-    					sender.sendMessage(ChatColor.GOLD + "/mapcoords list" + ChatColor.WHITE + " - Lists saved coordinates in database");
-    					sender.sendMessage(ChatColor.GOLD + "/mapcoords coords" + ChatColor.WHITE + " - Displays player's current coordinates");
-    					sender.sendMessage(ChatColor.GOLD + "/mapcoords saycoords" + ChatColor.WHITE + " - Makes the player say their current coordinates");
-    					return true;
+    			// Output how to use command if user doesn't provide arguments
+		
+    			// If typing /mc from Console, display all commands
+				if (!(sender instanceof Player) || !config.getBoolean("settings.permissions")) {
+					sender.sendMessage(ChatColor.YELLOW + "------- " + ChatColor.WHITE + "Available Mapcoords Commands " + ChatColor.YELLOW + " -------");
+	    			sender.sendMessage(ChatColor.GOLD + "/mc:" + ChatColor.WHITE + " Lists all available commands");
+	    			sender.sendMessage(ChatColor.GOLD + "/mc add [name]:" + ChatColor.WHITE + " Adds current location to private list");
+	    			sender.sendMessage(ChatColor.GOLD + "/mc addpublic/addp [name]:" + ChatColor.WHITE + " Adds current location to public list");
+    				sender.sendMessage(ChatColor.GOLD + "/mc delete [id]:" + ChatColor.WHITE + " Delete saved location id from database");
+    				sender.sendMessage(ChatColor.GOLD + "/mc list [page]:" + ChatColor.WHITE + " Lists coordinates from your private list");
+    				sender.sendMessage(ChatColor.GOLD + "/mc listpublic/listp [page]:" + ChatColor.WHITE + " Lists coordinates from public list");
+    				sender.sendMessage(ChatColor.GOLD + "/mc listother/listo [username] [page]:" + ChatColor.WHITE + " Lists another player's coordinates list");
+    				sender.sendMessage(ChatColor.GOLD + "/mc coords:" + ChatColor.WHITE + " Displays your current coordinates");
+    				sender.sendMessage(ChatColor.GOLD + "/mc saycoords:" + ChatColor.WHITE + " Says your current coordinates in chat");
+    				sender.sendMessage(ChatColor.GOLD + "/mc goto [id]:" + ChatColor.WHITE + " Gives directions to a location");
+    				sender.sendMessage(ChatColor.GOLD + "/mc find [username]:" + ChatColor.WHITE + " Finds a current player's location");
+    				sender.sendMessage(ChatColor.GOLD + "/mc tp [id]:" + ChatColor.WHITE + " Teleports you to location id");
+				} else {
+	    			sender.sendMessage(ChatColor.YELLOW + "------- " + ChatColor.WHITE + "Available Mapcoords Commands " + ChatColor.YELLOW + " -------");
+	    			sender.sendMessage(ChatColor.GOLD + "/mc:" + ChatColor.WHITE + " Lists all available commands");
+	    			if (pm.hasPermission((Player) sender, "mc.add.private") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc add [name]:" + ChatColor.WHITE + " Adds current location to private list");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.add.public") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc addpublic/addp [name]:" + ChatColor.WHITE + " Adds current location to public list");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.delete.public") || pm.hasPermission((Player) sender, "mc.delete.private") || pm.hasPermission((Player) sender, "mc.delete.other") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc delete [id]:" + ChatColor.WHITE + " Delete saved location id from database");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.list.private") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc list [page]:" + ChatColor.WHITE + " Lists coordinates from your private list");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.list.public") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc listpublic/listp [page]:" + ChatColor.WHITE + " Lists coordinates from public list");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.list.other") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc listother/listo [username] [page]:" + ChatColor.WHITE + " Lists another player's coordinates list");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.coords") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc coords:" + ChatColor.WHITE + " Displays your current coordinates");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.saycoords") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc saycoords:" + ChatColor.WHITE + " Says your current coordinates in chat");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.goto.public") || pm.hasPermission((Player) sender, "mc.goto.private") || pm.hasPermission((Player) sender, "mc.goto.other") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc goto [id]:" + ChatColor.WHITE + " Gives directions to a location");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.find") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc find [username]:" + ChatColor.WHITE + " Finds a current player's location");
+	    			}
+	    			if (pm.hasPermission((Player) sender, "mc.tp.public") || pm.hasPermission((Player) sender, "mc.tp.private") || pm.hasPermission((Player) sender, "mc.tp.other") && config.getBoolean("settings.permissions")) {
+	    				sender.sendMessage(ChatColor.GOLD + "/mc tp [id]:" + ChatColor.WHITE + " Teleports you to location id");
+	    			}
+				}
+				//sender.sendMessage(ChatColor.GOLD + "/mc perms" + ChatColor.WHITE + " Shows your available permissions");
+				return true;
     	    }
 			
-			// Adding coordinates command [PUBLIC LIST]
-			if (args[0].equalsIgnoreCase("add")) {
+			// Adding coordinates command [PRIVATE LIST]
+			if (args[0].equalsIgnoreCase("add") || args[0].equalsIgnoreCase("addprivate")) {
 				
 				// Only players can use this command
 				if (!(sender instanceof Player)) {
@@ -172,9 +224,9 @@ public class Mapcoords extends JavaPlugin implements Listener {
 					return true;
 				}
 				
-				// Check if player is OP or has the proper permission to run command [PUBLIC LIST]
+				// Check if player is OP or has the proper permission to run command [PRIVATE LIST]
 				Player perms = (Player) sender;
-				if (!pm.hasPermission(perms, "mc.add.public")) {
+				if (!pm.hasPermission(perms, "mc.add.private") && config.getBoolean("settings.permissions")) {
 					sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
 					return true;
 				}
@@ -215,7 +267,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
 					statement.close();
 					con.close();
 					// Send message to player that their coordinates have been inserted successfully.
-					sender.sendMessage("Your current location [" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] (X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z + ChatColor.WHITE + ") was saved as " + ChatColor.GREEN + args[1] + ChatColor.WHITE + "!");
+					sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z + ChatColor.WHITE + " saved as " + ChatColor.GREEN + args[1] + ChatColor.WHITE + " to private list.");
     			} catch (SQLException ex) {
     				if (!epic_fail) {
     					// Send error message if there is an error
@@ -225,59 +277,303 @@ public class Mapcoords extends JavaPlugin implements Listener {
 				return true;
 			}
 			
+			// Adding coordinates command [PUBLIC LIST]
+			else if (args[0].equalsIgnoreCase("addpublic") || args[0].equalsIgnoreCase("addp")) {
+					
+				// Only players can use this command
+				if (!(sender instanceof Player)) {
+					sender.sendMessage("This command can only be run by a player.");
+					return true;
+				}
+				
+				// Check if player is OP or has the proper permission to run command [PUBLIC LIST]
+				Player perms = (Player) sender;
+				if (!pm.hasPermission(perms, "mc.add.public") && config.getBoolean("settings.permissions")) {
+					sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+					return true;
+				}
+				
+				// Not enough arguments for coordinate
+				if (args.length == 1) {
+					sender.sendMessage(ChatColor.RED + "Please specify a name for your current location.");
+					return true;
+				}
+				
+				// Location information for player 
+				Player player = (Player) sender;
+			    Location loc = player.getLocation();
+			    int x = loc.getBlockX();
+			    int y = loc.getBlockY();
+			    int z = loc.getBlockZ();
+			    world = player.getLocation().getWorld().getName();
+			    world_id = stringToWorldID(world);
+			    
+			    // Attempt to write to database
+				try {
+					// Init query variables
+					Connection con = connection();
+					con.setAutoCommit(false);
+    				
+    				// Insert coordinates into database
+    				PreparedStatement statement = con.prepareStatement("INSERT INTO " + getTable() + " VALUES (?, 2, ?, ?, ?, ?, ?)");
+    				statement.setInt(1, 0);
+    				statement.setString(2, args[1]);
+    				statement.setInt(3, x);
+    				statement.setInt(4, y);
+    				statement.setInt(5, z);
+    				statement.setInt(6, world_id);
+					statement.executeUpdate();
+					con.commit();
+					
+					statement.close();
+					con.close();
+					// Send message to player that their coordinates have been inserted successfully.
+					sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z + ChatColor.WHITE + " saved as " + ChatColor.GREEN + args[1] + ChatColor.WHITE + " to public list.");
+    			} catch (SQLException ex) {
+    				if (!epic_fail) {
+    					// Send error message if there is an error
+    					getLogger().severe("\033[1;31m" + ex + "\033[0m");
+    				}
+    			}
+				return true;
+			}
+			
+			// Lists map coordinates that have been added in the database [PRIVATE LIST]
+			else if (args[0].equalsIgnoreCase("list") || args[0].equalsIgnoreCase("listprivate")) {
+				
+				// Check if player is OP or has the proper permission to run command. Also make sure that sender is a user and not console. [PRIVATE LIST]
+				if (sender instanceof Player) {
+					Player perms = (Player) sender;
+					
+					if (!pm.hasPermission(perms, "mc.list.private") && config.getBoolean("settings.permissions")) {
+						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+						return true;
+					}
+				} else {
+						sender.sendMessage("This command can only be run by a player.");
+						return true;
+				}
+				
+				// Try retrieving coordinates from database
+				Player player = (Player) sender;
+    			try {
+    				Connection con = connection();
+    				con.setAutoCommit(false);
+    				
+    				// Count number of coordinates in database
+    				Statement stnum = con.createStatement();
+					String querynum = "SELECT COUNT(id) FROM " + getTable() + " WHERE user = " + usernameToUserID(player.getPlayerListName());
+					ResultSet resultnum = stnum.executeQuery(querynum);
+					con.commit();
+					resultnum.next();
+					int totalPages = (int) Math.ceil(resultnum.getInt("COUNT(id)")/9.0), currentPage;
+					if (args.length == 1 || !isNumeric(args[1])) {
+						currentPage = 1;
+					} else {
+						currentPage = Integer.parseInt(args[1]);
+					}
+					if (currentPage > totalPages) {
+						currentPage = totalPages;
+					}
+					if (currentPage < 1) {
+						currentPage = 1;
+					}
+					if (totalPages == 0) {
+						totalPages = 1;
+					}
+					
+    				Statement st = con.createStatement();
+					String query = "SELECT id, user, name, x, y, z, world FROM " + getTable() + " WHERE user = " + usernameToUserID(player.getPlayerListName()) + " ORDER BY id DESC LIMIT " + (currentPage-1)*9 + ",9";
+					ResultSet result = st.executeQuery(query);
+					con.commit();
+					sender.sendMessage(ChatColor.YELLOW + "---" + ChatColor.WHITE + " Listing" + ChatColor.GOLD + " Private " + ChatColor.WHITE + "Coordinates - Page (" + currentPage + "/" + totalPages + " | Total: " + resultnum.getInt("COUNT(id)") + ")" + ChatColor.YELLOW + " ---");
+					
+					// Output all records in database
+					int a = 0;
+					while (result.next()) {
+						a++;
+						sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(result.getInt("world")) + ChatColor.WHITE + "] [" + ChatColor.RED + result.getInt("id") + ChatColor.WHITE + "] - " + ChatColor.GREEN + result.getString("name") + ChatColor.WHITE + " X: " + ChatColor.GOLD + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GOLD + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GOLD + result.getInt("z") + ChatColor.WHITE);
+					}
+					
+					// No coordinates if a is still 0
+					if (a == 0) {
+						sender.sendMessage(ChatColor.GOLD + "You haven't added any coordinates yet!");
+					}
+					st.close();
+					resultnum.close();
+					result.close();
+					con.close();
+    			} catch (Exception ex) {
+    				if (!epic_fail) {
+    					getLogger().severe("\033[1;31Error #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
+    				}
+    			}
+    			return true;
+    		}
+			
 			// Lists map coordinates that have been added in the database [PUBLIC LIST]
-			else if (args[0].equalsIgnoreCase("list")) {
+			else if (args[0].equalsIgnoreCase("listpublic") || args[0].equalsIgnoreCase("listp")) {
 				
 				// Check if player is OP or has the proper permission to run command. Also make sure that sender is a user and not console. [PUBLIC LIST]
 				if (sender instanceof Player) {
 					Player perms = (Player) sender;
 					
-					if (!pm.hasPermission(perms, "mc.list.public")) {
+					if (!pm.hasPermission(perms, "mc.list.public") && config.getBoolean("settings.permissions")) {
 						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
 						return true;
 					}
 				}
 				
 				// Try retrieve coordinates from database
-				sender.sendMessage("Listing recorded coordinates...");
     			try {
     				Connection con = connection();
     				con.setAutoCommit(false);
     				
+				// Count number of coordinates in database
+    				Statement stnum = con.createStatement();
+					String querynum = "SELECT COUNT(id) FROM " + getTable() + " WHERE user = 2";
+					ResultSet resultnum = stnum.executeQuery(querynum);
+					con.commit();
+					resultnum.next();
+					int totalPages = (int) Math.ceil(resultnum.getInt("COUNT(id)")/9.0), currentPage;
+					if (args.length == 1 || !isNumeric(args[1])) {
+						currentPage = 1;
+					} else {
+						currentPage = Integer.parseInt(args[1]);
+					}
+					if (currentPage > totalPages) {
+						currentPage = totalPages;
+					}
+					if (currentPage < 1) {
+						currentPage = 1;
+					}
+					if (totalPages == 0) {
+						totalPages = 1;
+					}
+					
     				Statement st = con.createStatement();
-					String query = "SELECT id, user, name, x, y, z, world FROM " + getTable() + " ORDER BY world, id DESC";
+					String query = "SELECT id, user, name, x, y, z, world FROM " + getTable() + " WHERE user = 2 ORDER BY id DESC LIMIT " + (currentPage-1)*9 + ",9";
 					ResultSet result = st.executeQuery(query);
 					con.commit();
-					
+					sender.sendMessage(ChatColor.YELLOW + "---" + ChatColor.WHITE + " Listing" + ChatColor.GOLD + " Public " + ChatColor.WHITE + "Coordinates - Page (" + currentPage + "/" + totalPages + " | Total: " + resultnum.getInt("COUNT(id)") + ")" + ChatColor.YELLOW + " ---");
+
 					// Output all records in database
 					int a = 0;
 					while (result.next()) {
 						a++;
-						sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(result.getInt("world")) + ChatColor.WHITE + "] [" + ChatColor.RED + result.getInt("id") + ChatColor.WHITE + "] - " + ChatColor.GREEN + result.getString("name") + ChatColor.WHITE + " at X: " + ChatColor.GOLD + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GOLD + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GOLD + result.getInt("z") + ChatColor.WHITE + " by " + ChatColor.AQUA + userIDToUsername(result.getInt("user")) + ChatColor.WHITE);
+						sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(result.getInt("world")) + ChatColor.WHITE + "] [" + ChatColor.RED + result.getInt("id") + ChatColor.WHITE + "] - " + ChatColor.GREEN + result.getString("name") + ChatColor.WHITE + " X: " + ChatColor.GOLD + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GOLD + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GOLD + result.getInt("z") + ChatColor.WHITE);
 					}
 					
 					// No coordinates if a is still 0
 					if (a == 0) {
-						sender.sendMessage(ChatColor.GOLD + "No coordinates have been added yet!");
+						sender.sendMessage(ChatColor.GOLD + "No public coordinates have been added yet!");
 					}
 					st.close();
+					resultnum.close();
 					result.close();
 					con.close();
     			} catch (Exception ex) {
     				if (!epic_fail) {
-    					sender.sendMessage(ChatColor.RED + "Error #1: Failed to connect to database! Is your database configuration set up correctly?");
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m");
     				}
     			}
     			return true;
     		}
 			
-			// Delete coordinates command [PUBLIC LIST]
+			// Lists map coordinates of another player
+			else if (args[0].equalsIgnoreCase("listother") || args[0].equalsIgnoreCase("listo")) {
+				
+				// Check if player is OP or has the proper permission to run command. Also make sure that sender is a user and not console. [PUBLIC LIST]
+				if (sender instanceof Player) {
+					Player perms = (Player) sender;
+					
+					if (!pm.hasPermission(perms, "mc.list.other") && config.getBoolean("settings.permissions")) {
+						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+						return true;
+					}
+				}
+				
+				if (args.length == 1) {
+					sender.sendMessage(ChatColor.RED + "You must specify a player's name.");
+					return true;
+				}
+				
+				if (!doesUsernameExist(args[1])) {
+					sender.sendMessage(ChatColor.RED + args[1] + " does not have any saved coordinates.");
+					return true;
+				}
+				
+				if (sender instanceof Player) {
+					Player perms = (Player) sender;
+					if (perms.getPlayerListName().equalsIgnoreCase(args[1]) && !pm.hasPermission(perms, "mc.list.private")) {
+						sender.sendMessage(ChatColor.RED + "You don't have permission to view this player's coordinates.");
+						return true;
+					}
+				}
+				
+				// Try retrieve coordinates from database
+    			try {
+    				Connection con = connection();
+    				con.setAutoCommit(false);
+    				
+				// Count number of coordinates in database
+    				Statement stnum = con.createStatement();
+					String querynum = "SELECT COUNT(id) FROM " + getTable() + " WHERE user = " + usernameToUserID(args[1]);
+					ResultSet resultnum = stnum.executeQuery(querynum);
+					con.commit();
+					resultnum.next();
+					int totalPages = (int) Math.ceil(resultnum.getInt("COUNT(id)")/9.0), currentPage;
+					if (args.length == 2 || !isNumeric(args[1])) {
+						currentPage = 1;
+					} else {
+						currentPage = Integer.parseInt(args[2]);
+					}
+					if (currentPage > totalPages) {
+						currentPage = totalPages;
+					}
+					if (currentPage < 1) {
+						currentPage = 1;
+					}
+					if (totalPages == 0) {
+						totalPages = 1;
+					}
+					
+    				Statement st = con.createStatement();
+					String query = "SELECT id, user, name, x, y, z, world FROM " + getTable() + " WHERE user = " + usernameToUserID(args[1]) + " ORDER BY id DESC LIMIT " + (currentPage-1)*9 + ",9";
+					ResultSet result = st.executeQuery(query);
+					con.commit();
+					sender.sendMessage(ChatColor.YELLOW + "-" + ChatColor.WHITE + " Listing " + ChatColor.GOLD + args[1] + "'s " + ChatColor.WHITE + "Coordinates - Page (" + currentPage + "/" + totalPages + " | Total: " + resultnum.getInt("COUNT(id)") + ")" + ChatColor.YELLOW + " -");
+
+					// Output all records in database
+					int a = 0;
+					while (result.next()) {
+						a++;
+						sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(result.getInt("world")) + ChatColor.WHITE + "] [" + ChatColor.RED + result.getInt("id") + ChatColor.WHITE + "] - " + ChatColor.GREEN + result.getString("name") + ChatColor.WHITE + " X: " + ChatColor.GOLD + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GOLD + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GOLD + result.getInt("z") + ChatColor.WHITE);
+					}
+					
+					// No coordinates if a is still 0
+					if (a == 0) {
+						sender.sendMessage(ChatColor.GOLD + args[1] + " doesn't have any coordinates saved!");
+					}
+					st.close();
+					resultnum.close();
+					result.close();
+					con.close();
+    			} catch (Exception ex) {
+    				if (!epic_fail) {
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
+    				}
+    			}
+    			return true;
+    		}
+			
+			// Delete coordinates command
     		else if (args[0].equalsIgnoreCase("delete")) {
     			
-    			// Check if player is OP or has the proper permission to run command [PUBLIC LIST]
+    			// Check if player is OP or has the proper permission to run command
     			if (sender instanceof Player) {
 	    			Player perms = (Player) sender;
-					if (!pm.hasPermission(perms, "mc.delete.public")) {
+					if (!pm.hasPermission(perms, "mc.delete.public") && !pm.hasPermission(perms, "mc.delete.private") && !pm.hasPermission(perms, "mc.delete.other") && config.getBoolean("settings.permissions")) {
 						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
 						return true;
 					}
@@ -285,24 +581,57 @@ public class Mapcoords extends JavaPlugin implements Listener {
 				
 				// Not enough arguments for coordinate
 				if (args.length == 1) {
-					sender.sendMessage(ChatColor.RED + "Please specify the ID number of the coords to delete (use /mapcoords list).");
+					sender.sendMessage(ChatColor.RED + "Please specify ID number of location to delete.");
 					return true;
 				}
 				
-				// Gets the ids of the coordinate locations
+				// Is it a number?
+				if (!isNumeric(args[1])) {
+					sender.sendMessage(ChatColor.RED + "Location must be an id.");
+					return true;
+				}
+				
+				// Array for available IDs that user can delete
     			ArrayList<Integer> ids = new ArrayList<Integer>();
+    			// If is a player
     			try {
     				Connection con = connection();
     				con.setAutoCommit(false);
     				
     				Statement st = con.createStatement();
-					String query = "SELECT id FROM " + getTable() + " ORDER BY world";
+    				
+    				String query = null;
+    				if (sender instanceof Player) {
+    	    			Player perms = (Player) sender;
+	    				if (pm.hasPermission(perms, "mc.delete.private") || !config.getBoolean("settings.permissions")) {
+	    					query = "SELECT id FROM " + getTable() + " WHERE user = " + usernameToUserID(perms.getPlayerListName());
+	    				}
+	    				if (pm.hasPermission(perms, "mc.delete.public") || !config.getBoolean("settings.permissions")) {
+	    					if (query != null) {
+	    						query = query + " UNION SELECT id FROM " + getTable() + " WHERE user = 2";
+	    					} else {
+	    						query = "SELECT id FROM " + getTable() + " WHERE user = 2";
+	    					}
+	    				}
+	    				if (pm.hasPermission(perms, "mc.delete.other") || !config.getBoolean("settings.permissions")) {
+	    					if (query != null) {
+	    						query = query + " UNION SELECT id FROM " + getTable() + " WHERE user <> 2 AND user <> " + usernameToUserID(perms.getPlayerListName());
+	    					} else {
+	    						query = "SELECT id FROM " + getTable() + " WHERE user <> 2 AND user <> " + usernameToUserID(perms.getPlayerListName());
+	    					}
+	    				}
+    				} else {
+    					query = "SELECT id FROM " + getTable();
+    				}
+    				query = query + ";";
 					ResultSet result = st.executeQuery(query);
 					con.commit();
 					
 					// Add all ids to id ArrayList
 					while (result.next()) {
-						ids.add(result.getInt("id"));
+						if (!ids.contains(result.getInt("id"))) {
+							ids.add(result.getInt("id"));
+						}
 					}
 					
 					st.close();
@@ -310,13 +639,13 @@ public class Mapcoords extends JavaPlugin implements Listener {
 					con.close();
     			} catch (Exception ex) {
     				if (!epic_fail) {
-    					sender.sendMessage(ChatColor.RED + "Error #1: Failed to connect to database! Is your database configuration set up correctly?");
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
     				}
     			}
     			
     			// If id not found in ArrayList, then the ID doesn't exist.
     			if (!ids.contains(Integer.parseInt(args[1]))) {
-    				sender.sendMessage(ChatColor.RED + "Location ID was not found in the database!");
+    				sender.sendMessage(ChatColor.RED + "Unknown Location ID!");
     				return true;
     			}
     			
@@ -334,7 +663,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
 					con.close();
     			} catch (SQLException ex) {
     				if (!epic_fail) {
-    					sender.sendMessage(ChatColor.RED + "Error #1: Failed to connect to database! Is your database configuration set up correctly?");
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
     				}
     			} catch (IndexOutOfBoundsException ex) {
     				sender.sendMessage("There are no recorded coordinates to delete.");
@@ -351,7 +680,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
 				}
     			// Check if player is OP or has the proper permission to run command
     			Player perms = (Player) sender;
-				if (!pm.hasPermission(perms, "mc.coords")) {
+				if (!pm.hasPermission(perms, "mc.coords") && config.getBoolean("settings.permissions")) {
 					sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
 					return true;
 				}
@@ -363,7 +692,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
     		    int z = loc.getBlockZ();
     		    world = player.getLocation().getWorld().getName();
     		    world_id = stringToWorldID(world);
-				sender.sendMessage("Your current location is [" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
+				sender.sendMessage("[" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
 				return true;
 			}
 			
@@ -376,7 +705,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
 				}
     			// Check if player is OP or has the proper permission to run command
     			Player perms = (Player) sender;
-				if (!pm.hasPermission(perms, "mc.saycoords")) {
+				if (!pm.hasPermission(perms, "mc.saycoords") && config.getBoolean("settings.permissions")) {
 					sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
 					return true;
 				}
@@ -390,8 +719,484 @@ public class Mapcoords extends JavaPlugin implements Listener {
     		    world_id = stringToWorldID(world);
 				player.chat("[" + ChatColor.LIGHT_PURPLE + worldIDToString(stringToWorldID(world)) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
 				return true;
-			} else {
-				sender.sendMessage(ChatColor.GOLD + "Unknown command. Type /mc or /mapcoords for help.");
+			}
+			
+    		// Player says their current coordinates
+    		/*
+    		else if (args[0].equalsIgnoreCase("perms")) {
+    			
+    			if (!(sender instanceof Player)) {
+					sender.sendMessage("This command can only be run by a player.");
+					return true;
+				}
+    			// Check if player is OP or has the proper permission to run command
+    			Player perms = (Player) sender;
+				if (!pm.hasPermission(perms, "mc.perms") && config.getBoolean("settings.permissions")) {
+					sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+					return true;
+				}
+				// Output permission privileges
+				sender.sendMessage("Listing permssions that you have");
+				sender.sendMessage(permsColor(perms, "mc.*"));
+				sender.sendMessage(permsColor(perms, "mc.perms"));
+				sender.sendMessage(permsColor(perms, "mc.add.public"));
+				sender.sendMessage(permsColor(perms, "mc.add.private"));
+				sender.sendMessage(permsColor(perms, "mc.list.public"));
+				sender.sendMessage(permsColor(perms, "mc.list.private"));
+				sender.sendMessage(permsColor(perms, "mc.list.other"));
+				sender.sendMessage(permsColor(perms, "mc.delete.public"));
+				sender.sendMessage(permsColor(perms, "mc.delete.private"));
+				sender.sendMessage(permsColor(perms, "mc.delete.other"));
+				sender.sendMessage(permsColor(perms, "mc.coords"));
+				sender.sendMessage(permsColor(perms, "mc.saycoords"));
+				
+				return true;
+			}
+			*/
+    		
+    		// Finds Coordinates of other players
+    		else if (args[0].equalsIgnoreCase("find")) {
+    			
+    			// Check if player is OP or has the proper permission to run command
+    			if (sender instanceof Player) {
+					Player perms = (Player) sender;
+					
+					if (!pm.hasPermission(perms, "mc.find") && config.getBoolean("settings.permissions")) {
+						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+						return true;
+					}
+				}
+    			
+    			if (args.length == 1) {
+    				sender.sendMessage(ChatColor.RED + "You must specify a player.");
+					return true;
+    			}
+				try {
+					Player search = Bukkit.getPlayer(args[1]);
+					Location loc = search.getLocation();
+	    		    int x = loc.getBlockX();
+	    		    int y = loc.getBlockY();
+	    		    int z = loc.getBlockZ();
+	    		    world = search.getLocation().getWorld().getName();
+	    		    world_id = stringToWorldID(world);
+	    		    
+	    		    sender.sendMessage(args[1] + " is at [" + ChatColor.LIGHT_PURPLE + worldIDToString(world_id) + ChatColor.WHITE + "] X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
+	    		    return true;
+				} catch (Exception ignore) {
+					if (args[1].equalsIgnoreCase("Herobrine")) {
+						sender.sendMessage(ChatColor.RED + args[1] + " isn't online...or is he?");
+					} else {
+						sender.sendMessage(ChatColor.RED + args[1] + " isn't online.");
+					}
+					return true;
+				}
+				
+			}
+    		
+    		// Directions to coordinates
+    		else if (args[0].equalsIgnoreCase("goto")) {
+    			
+    			// Check if player is OP or has the proper permission to run command
+    			if (sender instanceof Player) {
+					Player perms = (Player) sender;
+					
+					if (!pm.hasPermission(perms, "mc.goto.public") && !pm.hasPermission(perms, "mc.goto.private") && !pm.hasPermission(perms, "mc.goto.other") && config.getBoolean("settings.permissions")) {
+						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+						return true;
+					}
+				} else {
+					sender.sendMessage("This command can only be run by a player.");
+					return true;
+				}
+    			
+    			if (args.length == 1) {
+    				sender.sendMessage(ChatColor.RED + "You must specify a location id.");
+					return true;
+    			}
+    			
+    			// Array for available IDs that user can goto
+    			ArrayList<Integer> ids = new ArrayList<Integer>();
+    			Player perms = (Player) sender;
+    			try {
+    				Connection con = connection();
+    				con.setAutoCommit(false);
+    				
+    				Statement st = con.createStatement();
+    				
+    				String query = null;
+    				if (pm.hasPermission(perms, "mc.goto.private") || !config.getBoolean("settings.permissions")) {
+    					query = "SELECT id FROM " + getTable() + " WHERE user = " + usernameToUserID(perms.getPlayerListName());
+    				}
+    				if (pm.hasPermission(perms, "mc.goto.public") || !config.getBoolean("settings.permissions")) {
+    					if (query != null) {
+    						query = query + " UNION SELECT id FROM " + getTable() + " WHERE user = 2";
+    					} else {
+    						query = "SELECT id FROM " + getTable() + " WHERE user = 2";
+    					}
+    				}
+    				if (pm.hasPermission(perms, "mc.goto.other") || !config.getBoolean("settings.permissions")) {
+    					if (query != null) {
+    						query = query + " UNION SELECT id FROM " + getTable() + " WHERE user <> 2 AND user <> " + usernameToUserID(perms.getPlayerListName());
+    					} else {
+    						query = "SELECT id FROM " + getTable() + " WHERE user <> 2 AND user <> " + usernameToUserID(perms.getPlayerListName());
+    					}
+    				}
+    				query = query + ";";
+					ResultSet result = st.executeQuery(query);
+					con.commit();
+					
+					// Add all ids to id ArrayList
+					while (result.next()) {
+						if (!ids.contains(result.getInt("id"))) {
+							ids.add(result.getInt("id"));
+						}
+					}
+					
+					st.close();
+					result.close();
+					con.close();
+    			} catch (Exception ex) {
+    				if (!epic_fail) {
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
+    				}
+    			}
+    			// Now that we have all available ids that user can goto, try to calculate route.
+    			
+    			// Does the player have permission to goto this location?
+    			if (!isNumeric(args[1])) {
+    				sender.sendMessage(ChatColor.RED + "Location must be an id.");
+    				return true;
+    			}
+    			if (!ids.contains(Integer.parseInt(args[1]))) {
+					sender.sendMessage(ChatColor.RED + "Location does not exist!");
+					return true;
+    			}
+    			
+				try {
+					// Get the player's current location
+					Player player = (Player) sender;
+					Location loc = player.getLocation();
+	    		    int x = loc.getBlockX();
+	    		    int y = loc.getBlockY();
+	    		    int z = loc.getBlockZ();
+	    		    world = player.getLocation().getWorld().getName();
+	    		    world_id = stringToWorldID(world);
+	    		    
+	    		    
+	    		    Connection con = connection();
+	    	        con.setAutoCommit(false);
+	    	        
+	    	        Statement st = con.createStatement();
+	    	        
+	    			String query = "SELECT * FROM " + getTable() + " WHERE id = " + args[1];
+	    			ResultSet result = st.executeQuery(query);
+	    			con.commit();
+	    			result.next();
+	    			sender.sendMessage(ChatColor.YELLOW + "---- " + ChatColor.WHITE + "Now calculating route to " + ChatColor.GOLD + result.getString("name") + ChatColor.YELLOW + " ----");
+	    			sender.sendMessage("Current Coords    = X: " + ChatColor.GOLD + x + ChatColor.WHITE + " Y: " + ChatColor.GOLD + y + ChatColor.WHITE + " Z: " + ChatColor.GOLD + z);
+	    			sender.sendMessage("Destination Coords = X: " + ChatColor.GOLD + result.getInt("x") + ChatColor.WHITE + " Y: " + ChatColor.GOLD + result.getInt("y") + ChatColor.WHITE + " Z: " + ChatColor.GOLD + result.getInt("z"));
+	    			// A^2 + B^2 = C^2 (WOW! The FIRST time I have ever had to use actual formulas in a COMPUTER SCIENCE program. No derivatives yet but they are BOUND to be here soon!!!11!!)
+	    			if (world_id != result.getInt("world")) {
+	    				sender.sendMessage(ChatColor.RED + "The location you want to go to is literally out of this world. Go to " + worldIDToString(result.getInt("world")) + " first.");
+	    				return true;
+	    			}
+	    			double distance = Math.floor(Math.sqrt(Math.pow(Math.abs(y - result.getInt("y")), 2.0)+Math.pow(Math.sqrt(Math.pow(Math.abs(x - result.getInt("x")), 2.0) + Math.pow(Math.abs(z - result.getInt("z")), 2.0)), 2.0))*100+0.5)/100;
+	    			
+	    			sender.sendMessage("Distance: " + ChatColor.GREEN + distance + ChatColor.WHITE + " meters");
+	    			
+	    			double walk_h, walk_m, walk_s, walk_raw;
+	    			double sprint_h, sprint_m, sprint_s, sprint_raw;
+	    			
+	    			walk_raw = (Math.floor((distance/4.3)*100+0.5)/100)+1;
+	    			sprint_raw = (Math.floor((distance/5.6)*100+0.5)/100)+1;
+	    			
+	    			walk_h = TimeUnit.SECONDS.toHours((int)walk_raw);
+	    			walk_m = TimeUnit.SECONDS.toMinutes((int)walk_raw) - (TimeUnit.SECONDS.toHours((int)walk_raw)* 60);
+	    			walk_s = TimeUnit.SECONDS.toSeconds((int)walk_raw) - (TimeUnit.SECONDS.toMinutes((int)walk_raw) *60);
+	    			
+	    			sprint_h = TimeUnit.SECONDS.toHours((int)sprint_raw);
+	    			sprint_m = TimeUnit.SECONDS.toMinutes((int)sprint_raw) - (TimeUnit.SECONDS.toHours((int)sprint_raw)* 60);
+	    			sprint_s = TimeUnit.SECONDS.toSeconds((int)sprint_raw) - (TimeUnit.SECONDS.toMinutes((int)sprint_raw) *60);
+	    			
+	    			sender.sendMessage(ChatColor.YELLOW + "------ " + ChatColor.WHITE + "ETAs (Not including obstacles)" + ChatColor.YELLOW + " ------");
+	    			
+	    			String walk_message = "Walking: ";
+	    			if (walk_h != 0) {
+	    				if (walk_h == 1) {
+	    					walk_message = walk_message + ChatColor.GOLD + "1" + ChatColor.WHITE + " hour ";
+	    				} else {
+	    					walk_message = walk_message + ChatColor.GOLD + (int)walk_h + ChatColor.WHITE + " hours ";
+	    				}
+	    			}
+	    			if (walk_m != 0) {
+	    				if (walk_m == 1) {
+	    					walk_message = walk_message + ChatColor.GOLD + "1" + ChatColor.WHITE + " minute ";
+	    				} else {
+	    					walk_message = walk_message + ChatColor.GOLD + (int)walk_m + ChatColor.WHITE + " minutes ";
+	    				}
+	    			}
+	    			if (walk_s != 0) {
+	    				if (walk_s == 1) {
+	    					walk_message = walk_message + ChatColor.GOLD + "1" + ChatColor.WHITE + " second";
+	    				} else {
+	    					walk_message = walk_message + ChatColor.GOLD + (int)walk_s + ChatColor.WHITE + " seconds";
+	    				}
+	    			}
+	    			if (distance >=4.3) {
+	    				sender.sendMessage(walk_message);
+	    			} else {
+	    				sender.sendMessage("Walking: " + ChatColor.GOLD + "0 " + ChatColor.WHITE + "seconds");
+	    			}
+	    			String sprint_message = "Sprinting: ";
+	    			if (sprint_h != 0) {
+	    				if (sprint_h == 1) {
+	    					sprint_message = sprint_message + ChatColor.GOLD + "1" + ChatColor.WHITE + " hour ";
+	    				} else {
+	    					sprint_message = sprint_message + ChatColor.GOLD + (int)sprint_h + ChatColor.WHITE + " hours ";
+	    				}
+	    			}
+	    			if (sprint_m != 0) {
+	    				if (sprint_m == 1) {
+	    					sprint_message = sprint_message + ChatColor.GOLD + "1" + ChatColor.WHITE + " minute ";
+	    				} else {
+	    					sprint_message = sprint_message + ChatColor.GOLD + (int)sprint_m + ChatColor.WHITE + " minutes ";
+	    				}
+	    			}
+	    			if (sprint_s != 0) {
+	    				if (sprint_s == 1) {
+	    					sprint_message = sprint_message + ChatColor.GOLD + "1" + ChatColor.WHITE + " second";
+	    				} else {
+	    					sprint_message = sprint_message + ChatColor.GOLD + (int)sprint_s + ChatColor.WHITE + " seconds";
+	    				}
+	    			}
+	    			if (distance >= 5.6) {
+	    				sender.sendMessage(sprint_message);
+	    			} else {
+	    				sender.sendMessage("Sprinting: " + ChatColor.GOLD + "0 " + ChatColor.WHITE + "seconds");
+	    			}
+	    			
+	    			String heading = null;
+	    			/* OLD direction finder. New one uses awesomeness
+	    			// If destination x is lower than our current x, head West else head East
+	    			if (result.getInt("x") <= x) {
+	    				// If destination z is lower than our current z, head North else head South
+	    				if (result.getInt("z") < z) {
+	    					heading = "northwest"; 
+	    				}
+	    				else if (result.getInt("z") > z) {
+	    					heading = "southwest"; 
+	    				} else {
+	    					heading = "west";
+	    				}
+	    			} else {
+	    				// If destination z is lower than our current z, head North else head South
+	    				if (result.getInt("z") < z) {
+	    					heading = "northeast"; 
+	    				}
+	    				else if (result.getInt("z") > z) {
+	    					heading = "southeast"; 
+	    				} else {
+	    					heading = "east";
+	    				}
+	    			}
+	    			*/
+	    			/* New Direction Finder */
+	    			int x_diff = Math.abs(x - result.getInt("x"));
+	    			int z_diff = Math.abs(z - result.getInt("z"));
+	    			int dest_x = result.getInt("x");
+	    			int dest_z = result.getInt("z");
+	    			double degree = 0.0;
+	    			try {
+		    			degree = Math.toDegrees((double)Math.atan((double)x_diff/(double)z_diff));
+    				} catch (Exception ignore) {
+    	    			degree = Math.toDegrees((double)Math.atan((double)x_diff/(double)z_diff));
+    				}
+    				
+	    			// Quadrant 1
+	    			if (x >= dest_x && z <= dest_z) {
+	    				if (degree >= 0 && degree < 22.5) {
+	    					heading = "south";
+	    				}
+	    				else if (degree >= 22.5 && degree < 67.5) {
+	    					heading = "southwest";
+	    				}
+	    				else if (degree >= 67.5 && degree <= 90) {
+	    					heading = "west";
+	    				} else {
+	    					heading = "unknown";
+	    				}
+	    			}
+	    			// Quadrant 2
+	    			if (x <= dest_x && z <= dest_z) {
+	    				if (degree >= 0 && degree < 22.5) {
+	    					heading = "south";
+	    				}
+	    				else if (degree >= 22.5 && degree < 67.5) {
+	    					heading = "southeast";
+	    				}
+	    				else if (degree >= 67.5 && degree <= 90) {
+	    					heading = "east";
+	    				} else {
+	    					heading = "unknown";
+	    				}
+	    			}
+	    			// Quadrant 3
+	    			if (x <= dest_x && z >= dest_z) {
+	    				if (degree >= 0 && degree < 22.5) {
+	    					heading = "north";
+	    				}
+	    				else if (degree >= 22.5 && degree < 67.5) {
+	    					heading = "northeast";
+	    				}
+	    				else if (degree >= 67.5 && degree <= 90) {
+	    					heading = "east";
+	    				} else {
+	    					heading = "unknown";
+	    				}
+	    			}
+	    			// Quadrant 4
+	    			else if (x >= dest_x && z > dest_z) {
+	    				if (degree >= 0 && degree < 22.5) {
+	    					heading = "north";
+	    				}
+	    				else if (degree >= 22.5 && degree < 67.5) {
+	    					heading = "northwest";
+	    				}
+	    				else if (degree >= 67.5 && degree <= 90) {
+	    					heading = "west";
+	    				} else {
+	    					heading = "unknown";
+	    				}
+	    			}
+	    			
+	    			sender.sendMessage("Your destination is " + ChatColor.GOLD + heading + ChatColor.WHITE + " from you.");
+	    			sender.sendMessage("You are currently facing " + ChatColor.GOLD + getDirection(loc.getYaw(), true) + ChatColor.WHITE + ".");
+	    			result.close();
+					st.close();
+					con.close();
+    			} catch (SQLException ex) {
+    				if (!epic_fail) {
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
+    				}
+    				
+	    		    return true;
+				} catch (Exception ignore) {
+					return true;
+				}
+				return true;
+			}
+			
+			// Teleport command
+    		else if (args[0].equalsIgnoreCase("tp")) {
+    			
+    			// Check if player is OP or has the proper permission to run command
+    			if (sender instanceof Player) {
+					Player perms = (Player) sender;
+					
+					if (!pm.hasPermission(perms, "mc.tp.public") && !pm.hasPermission(perms, "mc.tp.private") && !pm.hasPermission(perms, "mc.tp.other") && config.getBoolean("settings.permissions")) {
+						sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+						return true;
+					}
+				} else {
+					sender.sendMessage("This command can only be run by a player.");
+					return true;
+				}
+    			
+    			if (args.length == 1) {
+    				sender.sendMessage(ChatColor.RED + "You must specify a location id.");
+					return true;
+    			}
+    			
+    			if (!isNumeric(args[1])) {
+    				sender.sendMessage(ChatColor.RED + "Location must be an id.");
+    				return true;
+    			}
+    			
+    			// Array for available IDs that user can goto
+    			ArrayList<Integer> ids = new ArrayList<Integer>();
+    			Player perms = (Player) sender;
+    			try {
+    				Connection con = connection();
+    				con.setAutoCommit(false);
+    				
+    				Statement st = con.createStatement();
+    				
+    				String query = null;
+    				if (pm.hasPermission(perms, "mc.tp.private") || !config.getBoolean("settings.permissions")) {
+    					query = "SELECT id FROM " + getTable() + " WHERE user = " + usernameToUserID(perms.getPlayerListName());
+    				}
+    				if (pm.hasPermission(perms, "mc.tp.public") || !config.getBoolean("settings.permissions")) {
+    					if (query != null) {
+    						query = query + " UNION SELECT id FROM " + getTable() + " WHERE user = 2";
+    					} else {
+    						query = "SELECT id FROM " + getTable() + " WHERE user = 2";
+    					}
+    				}
+    				if (pm.hasPermission(perms, "mc.tp.other") || !config.getBoolean("settings.permissions")) {
+    					if (query != null) {
+    						query = query + " UNION SELECT id FROM " + getTable() + " WHERE user <> 2 AND user <> " + usernameToUserID(perms.getPlayerListName());
+    					} else {
+    						query = "SELECT id FROM " + getTable() + " WHERE user <> 2 AND user <> " + usernameToUserID(perms.getPlayerListName());
+    					}
+    				}
+    				query = query + ";";
+					ResultSet result = st.executeQuery(query);
+					con.commit();
+					
+					// Add all ids to id ArrayList
+					while (result.next()) {
+						if (!ids.contains(result.getInt("id"))) {
+							ids.add(result.getInt("id"));
+						}
+					}
+					
+					st.close();
+					result.close();
+					con.close();
+    			} catch (Exception ex) {
+    				if (!epic_fail) {
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
+    				}
+    			}
+    			// Now that we have all available ids that user can goto, try to calculate route.
+    			
+    			// Does the player have permission to goto this location?
+    			if (!ids.contains(Integer.parseInt(args[1]))) {
+					sender.sendMessage(ChatColor.RED + "Location does not exist!");
+					return true;
+    			}
+    			
+    			try {
+    				Player player = (Player) sender;
+	    		    Connection con = connection();
+	    	        con.setAutoCommit(false);
+	    	        
+	    	        Statement st = con.createStatement();
+	    	        
+	    			String query = "SELECT * FROM " + getTable() + " WHERE id = " + args[1];
+	    			ResultSet result = st.executeQuery(query);
+	    			con.commit();
+	    			result.next();
+	    			
+	    			player.teleport(new Location(Bukkit.getServer().getWorld(worldIDToString(result.getInt("world"), true)), result.getInt("x"), result.getInt("y"), result.getInt("z")));
+	    			player.sendMessage(ChatColor.LIGHT_PURPLE + "Poof! " + ChatColor.WHITE + "Teleported to " + ChatColor.GOLD + result.getString("name") + ChatColor.WHITE + "!");
+	    			
+	    			result.close();
+					st.close();
+					con.close();
+    			} catch (Exception ex) {
+    				if (!epic_fail) {
+    					getLogger().severe("\033[1;31mError #1: Failed to connect to database! Is your database configuration set up correctly?\033[0m" + ex);
+    				}
+    				
+	    		    return true;
+				}    			
+    			return true;
+    		}
+    		
+    		
+    		else {
+				sender.sendMessage(ChatColor.RED + "Unknown command. Type /mc for help.");
 				return true;
 			}
     	}
@@ -770,6 +1575,38 @@ public class Mapcoords extends JavaPlugin implements Listener {
 		}
     }
     
+    public String worldIDToString(int world_id, boolean internal_name) {
+    	// Search for string in database first
+    	try {
+	        Connection con = connection();
+	        con.setAutoCommit(false);
+	        Statement st = con.createStatement();
+	        
+			String query = "SELECT name, altname, id FROM " + getTable() + "_worlds WHERE id = '" + world_id + "'";
+			ResultSet result = st.executeQuery(query);
+			con.commit();
+			result.next();
+			
+			String name;
+			if (result.getString("name") == null) {
+				name = result.getString("altname");
+			} else {
+				name = result.getString("name");
+			}
+			
+			// Close statement and database connection
+			result.close();
+	        st.close();
+	        con.close();
+	        return name;
+        } catch (SQLException ex) {
+        	if (!epic_fail) {
+        		getLogger().severe("\033[1;31mError #5: Failed to find world name equivalent of supplied world id!\033[0m");
+        	}
+			return "Unknown";
+		}
+    }
+    
 	/*
     * Setup the permissions manager
     */
@@ -1031,4 +1868,161 @@ public class Mapcoords extends JavaPlugin implements Listener {
         }
         return true;
     }
+    
+    public String permsColor(Player p, String perms) {
+    	if (pm.hasPermission(p, perms)) {
+    		return perms + ": " + ChatColor.GREEN + "yes" + ChatColor.WHITE;
+    	} else {
+    		return perms + ": " + ChatColor.RED + "no" + ChatColor.WHITE;
+    	}
+    }
+    
+    public boolean doesUsernameExist(String username) {
+    	try {
+    		Connection con = connection();
+    		con.setAutoCommit(false);
+    		
+			Statement st = con.createStatement();
+			
+			String query = "SELECT COUNT(*) FROM test_users WHERE username = '" + username + "'";
+			ResultSet result = st.executeQuery(query);
+			con.commit();
+			result.next();
+			int found = result.getInt("COUNT(*)");
+
+			// Close statements and database connection
+			result.close();
+			st.close();
+	        con.close();
+	        
+	        if (found == 1) {
+	        	return true;
+	        } else {
+	        	return false;
+	        }
+	        
+    	} catch (Exception ex) {
+    		if (!epic_fail) {
+    			getLogger().severe("\033[1;31mError #10: Failed to determine if username exists!\033[0m" + ex);
+    		}
+    		return false;
+		}
+    }
+    
+    public int getDirection(Float yaw) {
+        yaw = yaw / 90;
+        yaw = (float)Math.round(yaw);
+        if (yaw == -4 || yaw == 0 || yaw == 4) {
+        	return 0;
+        }
+        else if (yaw == -1 || yaw == 3) {
+        	return 3;
+        }
+        else if (yaw == -2 || yaw == 2) {
+        	return 2;
+        }
+        else if (yaw == -3 || yaw == 1) {
+        	return 1;
+        } else {
+        	return 4;
+        }
+    }
+    
+    public String getDirection(float yaw, boolean name) {
+    	if ( yaw < 0 ){
+    		yaw += 360;
+    	}
+    	yaw %= 360;
+        if (yaw <= 22.5 && yaw >= 0 || yaw > 337.5 && yaw <= 360) {
+        	return "south";
+        }
+        else if (yaw > 22.5 && yaw <= 67.5) {
+        	return "southwest";
+        }
+        else if (yaw > 67.5 && yaw <= 112.5) {
+        	return "west";
+        }
+        else if (yaw > 112.5 && yaw <= 157.5) {
+        	return "northwest";
+        }
+        else if (yaw > 157.5 && yaw <= 202.5) {
+        	return "north";
+        }
+        else if (yaw > 202.5 && yaw <= 247.5) {
+        	return "northeast";
+        }
+        else if (yaw > 247.5 && yaw <= 292.5) {
+        	return "east";
+        }
+        else if (yaw > 247.5 && yaw <= 337.5) {
+        	return "southeast";
+        } else {
+        	return "unknown";
+        }
+    	/*
+        yaw = (float) (Math.floor(Math.abs((float)yaw)*100+0.5)/100);
+        System.out.println(yaw);
+        if (yaw <= 22.5 && yaw >= 0 || yaw > 337.5 && yaw <= 360) {
+        	return "south";
+        }
+        else if (yaw > 22.5 && yaw <= 67.5) {
+        	return "southwest";
+        }
+        else if (yaw > 67.5 && yaw <= 112.5) {
+        	return "west";
+        }
+        else if (yaw > 112.5 && yaw <= 157.5) {
+        	return "northwest";
+        }
+        else if (yaw > 157.5 && yaw <= 202.5) {
+        	return "north";
+        }
+        else if (yaw > 202.5 && yaw <= 247.5) {
+        	return "northeast";
+        }
+        else if (yaw > 247.5 && yaw <= 292.5) {
+        	return "east";
+        }
+        else if (yaw > 247.5 && yaw <= 337.5) {
+        	return "southeast";
+        } else {
+        	return "unknown";
+        }
+        */
+        /*
+        if (yaw >= 60 && yaw < 30) {
+        	return "southeast";
+        }
+        else if (yaw >= -120 && yaw < -60) {
+        	return "east";
+        }
+        else if (yaw >= -150 && yaw < -120) {
+        	return "northeast";
+        }
+        else if (yaw >= -210 && yaw < -150) {
+        	return "north";
+        }
+        else if (yaw >= -240 && yaw < -210) {
+        	return "northwest";
+        }
+        else if (yaw >= -300 && yaw < -240) {
+        	return "west";
+        }
+        else if (yaw >= -330 && yaw < -300) {
+        	return "southwest";
+        } else {
+        	return "south";
+        }
+        */
+    }
+    
+    @SuppressWarnings({"unused"})
+    public static boolean isNumeric(String str) {  
+    	try {  
+    		double d = Double.parseDouble(str);  
+    	} catch(NumberFormatException nfe) {    
+    		return false;  
+    	}
+	  return true;  
+	}
 }
