@@ -108,6 +108,12 @@ If you are using a database
 - mc.rename.other       - Rename other players coordinates
 
 ## Change Log
+### Version 1.0.2
+- Fixed database bug that made the connection with the database timeout.
+- Fixed bug that prevented database connection from closing (hint: I forgot to add code that closed connection to the database).
+- Added support for multiple worlds! Unfortunately since previous versions of Mapcoords stored worlds that weren't named "world*" as "Unknown", servers that had custom worlds will have to redo those coordinates so that they accurately reflect which world they can be found in.
+- Changed numbering system for /mc list. Instead of a numerical order, the list displays the coordinate internal ids. This is to prevent accidental deletion of coordinates. Thus, the /mc delete command will require the coordinate ids now.
+
 ### Version 1.0.1
 - Added support for The Nether and The End!
 - Made the coords and saycoords command say what world you are in.

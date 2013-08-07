@@ -1,41 +1,62 @@
 name: Mapcoords
 main: com.guysthatcode.Mapcoords.Mapcoords
-version: 1.0.1
+version: 1.0.2
 description: This plugin can record coordinates and retrieve saved locations.
 author: SoleWolf
 
 commands:
    mapcoords:
       description: Lists all available commands
-   mapcoords add:
-      description: Adds player's current location [name] to database
-      usage: /mapcoords add [name]
-   mapcoords delete:
-      description: Delete saved location [id] from database
-      usage: /mapcoords delete [id]
-   mapcoords list:
-      description: Lists saved coordinates in database
-      usage: /mapcoords list
-   mapcoords coords:
-      description: Displays player's current coordinates
-      usage: /mapcoords coords
-   mapcoords saycoords:
-      description: Makes the player say their current coordinates
-      usage: /mapcoords saycoords
-   mapcoords find:
-      description: Gets a player's current coordinates.
-      usage: /mapcoords find [player]
    mc:
       description: Lists all available commands
-   mc add [name]:
-      description: Adds player's current location [name] to database
-   mc delete [id]:
-      description: Delete saved location [id] from database
-   mc list:
-      description: Lists saved coordinates in database
-   mc coords:
-      description: Displays player's current coordinates
-   mc saycoords:
-      description: Makes the player say their current coordinates
-   mapcoords find:
-      description: Gets a player's current coordinates.
+
+permissions:
+   mapcoords.*:
+        description: Gives permission for all mapcoords commands
+        children:
+            mapcords.add: true
+            mapcords.list: true
+            mapcords.delete: true
+            mapcords.coords: true
+            mapcords.saycoords: true
+
+   mapcords.add:
+      description: Add location coordinates.
+      default: op
+   mapcords.list:
+      description: Lists all coordinates.
+      default: op
+   mapcords.delete:
+      description: Delete location coordinates
+      default: op
+   mapcords.coords:
+      description: View your own coordinates
+      default: true
+   mapcords.saycoords:
+      description: Say your coordinates
+      default: true
+
+   mc.*:
+        description: Gives permission for all mapcoords commands
+        children:
+            mc.add: true
+            mc.list: true
+            mc.delete: true
+            mc.coords: true
+            mc.saycoords: true
+
+   mc.add:
+      description: Add location coordinates.
+      default: op
+   mc.list:
+      description: Lists all coordinates.
+      default: op
+   mc.delete:
+      description: Delete location coordinates
+      default: op
+   mc.coords:
+      description: View your own coordinates
+      default: true
+   mc.saycoords:
+      description: Say your coordinates
+      default: true
