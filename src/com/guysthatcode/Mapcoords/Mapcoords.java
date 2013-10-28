@@ -1,21 +1,12 @@
 /*
  * Mapcoords
- * Version 2.0.0
- * Date: Thu Jun 28, 2013 9:43:21 PM
- * Fixed listo bug
- * Fixed goto bug. If you are at the exact coords of destination, it now says under or above instead of unknown.
- * Fixed teleportation bug. Now you want spawn underground 1 block from your destination and die of suffocation when you tp.
- * Added support for Flat File storage vs MySQL
- * Added Compass command
- * Added Publish command
- * Added Flying speed to goto command's ETAs
- * Added Rename command
- * Code much more readable
- * useDatabase set to false by default
- * Added debug
- * Added page numbers for mc help
- * Modified color scheme to make it more consistent
- * Reduced a lot of coding redundancies and duplication therefore reducing file size by 5 kb (But the new features made brought all of that space back).
+ * Version 2.1.0
+ * Date: Mon Oct 28, 2013 11:02:25 AM
+ * 
+ * Updated Metrics to latest version
+ * Fixes Unknown world bug for 1st new world coordinates save
+ * Added ability to do things like mc.add.* and mc.list.*
+ * Fixed bug in default permissions that allowed a user to publish coords to public list
  * 
  */
 
@@ -1001,6 +992,41 @@ public class Mapcoords extends JavaPlugin implements Listener {
 				return true;
 			}
     		
+    		else if (args[0].equalsIgnoreCase("perms")) {
+                
+                if (!(sender instanceof Player)) {
+                                sender.sendMessage("This command can only be run by a player.");
+                                return true;
+                        }
+                // Check if player is OP or has the proper permission to run command
+                Player perms = (Player) sender;
+                        /*
+                		if (!perms.hasPermission("mc.perms") && config.getBoolean("settings.permissions")) {
+                                sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+                                return true;
+                        }
+                        */
+                        // Output permission privileges
+                        sender.sendMessage("Listing permssions that you have");
+                        sender.sendMessage(permsColor(perms, "mc.add.public") + " | " + permsColor(perms, "mc.add.private"));
+                        sender.sendMessage(permsColor(perms, "mc.list.public") + " | " + permsColor(perms, "mc.list.private") + " | " + permsColor(perms, "mc.list.other"));
+                        sender.sendMessage(permsColor(perms, "mc.delete.public") + " | " + permsColor(perms, "mc.delete.private") + " | " + permsColor(perms, "mc.delete.other"));
+                        sender.sendMessage(permsColor(perms, "mc.coords") + " | " + permsColor(perms, "mc.saycoords"));
+                        sender.sendMessage(permsColor(perms, "mc.find"));
+                        sender.sendMessage(permsColor(perms, "mc.goto.public") + " | " + permsColor(perms, "mc.goto.private") + " | " + permsColor(perms, "mc.goto.other"));
+                        sender.sendMessage(permsColor(perms, "mc.tp.public") + " | " + permsColor(perms, "mc.tp.private") + " | " + permsColor(perms, "mc.tp.other"));
+                        sender.sendMessage(permsColor(perms, "mc.compass.public") + " | " + permsColor(perms, "mc.compass.private") + " | " + permsColor(perms, "mc.compass.other") + " | " + permsColor(perms, "mc.compass.reset"));
+                        sender.sendMessage(permsColor(perms, "mc.publish.private") + " | " + permsColor(perms, "mc.publish.other"));
+                        sender.sendMessage(permsColor(perms, "mc.rename.public") + " | " + permsColor(perms, "mc.rename.private") + " | " + permsColor(perms, "mc.rename.other"));
+
+
+
+
+
+                        
+                        return true;
+                }
+			
     		// Finds Coordinates of other players
     		else if (args[0].equalsIgnoreCase("find")) {
     			
@@ -2160,7 +2186,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
 
 			// Update counter values
 			updateCounter(3);
-            return 4;
+            return worldid;
     	}
     }
     
@@ -2635,7 +2661,7 @@ public class Mapcoords extends JavaPlugin implements Listener {
         }
         return true;
     }
-    @SuppressWarnings({"unused"})
+    
     private String permsColor(Player p, String perms) {
     	if (p.hasPermission(perms)) {
     		return perms + ": " + ChatColor.GREEN + "yes" + ChatColor.WHITE;

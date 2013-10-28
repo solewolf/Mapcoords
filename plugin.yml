@@ -1,6 +1,6 @@
 name: Mapcoords
 main: com.guysthatcode.Mapcoords.Mapcoords
-version: 2.0.0
+version: 2.1.0
 description: This plugin provides useful tools for coordinates
 author: SoleWolf
 website: http://dev.bukkit.org/bukkit-plugins/mapcoords/
@@ -52,6 +52,73 @@ permissions:
       mc.rename.private: true
       mc.rename.other: true
     default: op
+
+  mc.add.*:
+    description: Give access to all coordinate adding Mapcoords permissions.
+    children:
+      mc.add.public: true
+      mc.add.private: true
+    default: false
+
+  mc.list.*:
+    description: Give access to all coordinate listing Mapcoords permissions.
+    children:
+      mc.list.public: true
+      mc.list.private: true
+      mc.list.other: true
+    default: false
+
+  mc.delete.*:
+    description: Give access to all coordinate deleting Mapcoords permissions.
+    children:
+      mc.delete.public: true
+      mc.delete.private: true
+      mc.delete.other: true
+    default: false
+
+  mc.goto.*:
+    description: Give access to all coordinate directions Mapcoords permissions.
+    children:
+      mc.goto.public: true
+      mc.goto.private: true
+      mc.goto.other: true
+    default: false
+
+  mc.tp.*:
+    description: Give access to all coordinate teleporting Mapcoords permissions.
+    children:
+      mc.tp.public: true
+      mc.tp.private: true
+      mc.tp.other: true
+    default: false
+
+  mc.compass.*:
+    description: Give access to all compass Mapcoords permissions.
+    children:
+      mc.compass.public: true
+      mc.compass.private: true
+      mc.compass.other: true
+      mc.compass.reset: true
+    default: false
+
+  mc.publish.*:
+    description: Give access to all coordinate publishing Mapcoords permissions.
+    children:
+      mc.publish.private: true
+      mc.publish.other: true
+    default: false
+
+  mc.rename.*:
+    description: Give access to all coordinate renaming Mapcoords permissions.
+    children:
+      mc.rename.public: true
+      mc.rename.private: true
+      mc.rename.other: true
+    default: false
+
+
+
+
   mc:
     description: Mapcoords base command
     default: true
@@ -130,7 +197,7 @@ permissions:
 
   mc.publish.private:
     description: Publish private coordinates to the public list
-    default: true
+    default: false
   mc.publish.other:
     description: Publish other players coordinates to the public list
     default: false
