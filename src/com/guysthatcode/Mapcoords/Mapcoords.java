@@ -12,12 +12,10 @@
 
 package com.guysthatcode.Mapcoords;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -44,10 +42,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import com.guysthatcode.Mapcoords.Updater.UpdateResult;
+import com.guysthatcode.Mapcoords.Updater.UpdateType;
 
 public class Mapcoords extends JavaPlugin implements Listener {
 	
@@ -2310,21 +2308,15 @@ public class Mapcoords extends JavaPlugin implements Listener {
         Player player = e.getPlayer();
         if (config.getBoolean("settings.checkForUpdates") == true) {
 	        if (player.isOp() && isInternetReachable()) {
-	        	try {
-	    	        URL update = new URL("http://guysthatcode.com/keith/bukkit/mapcoords.php");
-	    	        BufferedReader in = new BufferedReader(new InputStreamReader(update.openStream()));
-	    	
-	    	        newVersion = in.readLine();
-	    	        in.close();
-	    	        
-	    	        // Convert versions into numbers
-	    	        iver = Integer.parseInt(version.replaceAll("[.]", ""));
-	    	        inewver = Integer.parseInt(newVersion.replaceAll("[.]", ""));
-	    	        if (iver != inewver) {
-	    	        	player.sendMessage(ChatColor.LIGHT_PURPLE + "A new version of Mapcoords is available!");
+	            try {
+	            	Updater updater = new Updater(this, 58518, this.getFile(), UpdateType.NO_DOWNLOAD, true);
+	            	if (updater.getResult() == UpdateResult.UPDATE_AVAILABLE) {
+	    	        	player.sendMessage(ChatColor.LIGHT_PURPLE + "A new version [" + updater.getLatestName().split(" v")[1] + "] of Mapcoords is available!");
 	    	        }
 	            } catch (Exception ex) {
-	    			getLogger().severe("\033[1;31mError #6: Failed connecting to update server!\033[0m");
+	            	if (debug()) {
+	            		getLogger().severe("\033[1;31m[Debug] Error occured:\033[0m " + ex);
+	            	}
 	            }
 	        }
         }
@@ -2570,27 +2562,16 @@ public class Mapcoords extends JavaPlugin implements Listener {
      * Checks for available updates of Mapcoords
      */
     private void checkForUpdates() {
-    	PluginManager pm = getServer().getPluginManager();
-    	Plugin p = pm.getPlugin("Mapcoords");
-    	PluginDescriptionFile pdf = p.getDescription();
-    	version = pdf.getVersion();
+    	version = this.getDescription().getVersion();
     	
     	getLogger().info("Checking for updates...");
         try {
-	        URL update = new URL("http://guysthatcode.com/keith/bukkit/mapcoords.php");
-	        BufferedReader in = new BufferedReader(new InputStreamReader(update.openStream()));
-	
-	        newVersion = in.readLine();
-	        in.close();
-	        
-	        // Convert versions into numbers
-	        iver = Integer.parseInt(version.replaceAll("[.]", ""));
-	        inewver = Integer.parseInt(newVersion.replaceAll("[.]", ""));
-	        if (iver != inewver) {
+        	Updater updater = new Updater(this, 58518, this.getFile(), UpdateType.NO_DOWNLOAD, true);
+        	if (updater.getResult() == UpdateResult.UPDATE_AVAILABLE) {
 	        	getLogger().info("\033[1;35mThere is a new version of Mapcoords available :D\033[0m");
 	        	getLogger().info("\033[1;35mDownload it from http://dev.bukkit.org/bukkit-mods/mapcoords/\033[0m");
 	        	getLogger().info("Your version: \033[1;31m" + version + "\033[0m");
-	        	getLogger().info("New version : \033[1;32m" + newVersion + "\033[0m");
+	        	getLogger().info("New version : \033[1;32m" + updater.getLatestName().split(" v")[1] + "\033[0m");
 	        	newUpdate = true;
 	        } else {
 	        	getLogger().info("No new updates available...");
